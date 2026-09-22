@@ -2,153 +2,564 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BuildHz — Pedidos de Construcción</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BuildHz — Minecraft Building</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
-  --bg:#0b0f14; --panel:#111821; --panel2:#151e29; --line:#263241;
-  --text:#f3f6fa; --muted:#9ca9b8; --accent:#6ea8fe; --accent2:#8b7cff;
-  --pending:#f0ad4e; --building:#4da3ff; --done:#42d392; --danger:#ff6678;
+ --bg:#080c11;
+ --panel:#111923;
+ --panel2:#172230;
+ --line:#293849;
+ --text:#f5f7fa;
+ --muted:#9caabb;
+ --accent:#6ea8fe;
+ --accent2:#8b7cff;
+ --yellow:#f0ad4e;
+ --blue:#4da3ff;
+ --green:#42d392;
+ --red:#ff6678;
 }
+
 *{box-sizing:border-box}
+
 body{
-  margin:0;
-  background:linear-gradient(135deg,#090d12,#101722 55%,#0b1119);
-  color:var(--text);
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  min-height:100vh
+ margin:0;
+ color:var(--text);
+ min-height:100vh;
+ font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+ background:
+ radial-gradient(circle at 10% 0,#1a2b43 0,transparent 32%),
+ radial-gradient(circle at 100% 20%,#211c3d 0,transparent 28%),
+ linear-gradient(135deg,#070b10,#101722 55%,#090e15);
 }
+
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
-.nav{
-  position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line);
-  background:rgba(11,15,20,.88);backdrop-filter:blur(16px)
-}
-.nav-inner{
-  max-width:1180px;margin:auto;padding:18px 22px;display:flex;
-  align-items:center;justify-content:space-between;gap:20px
-}
-.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.3px}
-.logo{
-  width:40px;height:40px;border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:grid;place-items:center;color:white;font-weight:900
-}
-.tabs{display:flex;gap:6px;flex-wrap:wrap}
-.tab{
-  border:1px solid transparent;background:transparent;color:var(--muted);
-  padding:10px 13px;border-radius:10px
-}
-.tab:hover,.tab.active{
-  background:#182231;color:#fff;border-color:#2b394b
-}
-.container{max-width:1180px;margin:auto;padding:38px 22px 60px}
-.hero{
-  display:flex;justify-content:space-between;align-items:flex-end;
-  gap:30px;margin-bottom:30px
-}
-.hero h1{font-size:clamp(32px,5vw,56px);line-height:1.02;margin:0 0 12px}
-.hero p{margin:0;color:var(--muted);max-width:680px;font-size:16px}
-.panel{
-  background:linear-gradient(180deg,rgba(21,30,41,.96),rgba(15,22,30,.96));
-  border:1px solid var(--line);border-radius:18px;
-  box-shadow:0 18px 50px rgba(0,0,0,.2)
-}
-.form{padding:25px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}
-.full{grid-column:1/-1}
-.field label{
-  display:block;color:#d9e1ea;font-size:13px;font-weight:700;margin:0 0 8px
-}
-.field input,.field textarea,.field select{
-  width:100%;border:1px solid #2b3949;background:#0c131b;color:#fff;
-  border-radius:11px;padding:12px 13px;outline:none;transition:.2s
-}
-.field textarea{min-height:115px;resize:vertical}
-.field input:focus,.field textarea:focus,.field select:focus{
-  border-color:var(--accent);box-shadow:0 0 0 3px rgba(110,168,254,.12)
-}
-.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
-.primary{
-  border:0;border-radius:11px;padding:12px 17px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  color:#fff;font-weight:800
-}
-.primary:disabled{opacity:.6;cursor:not-allowed}
-.secondary{
-  border:1px solid #334255;background:#151e29;color:#dfe7ef;
-  border-radius:11px;padding:12px 17px
-}
-.notice{
-  padding:14px 16px;margin-bottom:17px;border-radius:12px;
-  background:#101925;border:1px solid #29384a;color:var(--muted);font-size:13px
-}
-.columns{display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
-.col{padding:17px;min-height:220px}
-.col-head{
-  display:flex;justify-content:space-between;align-items:center;margin-bottom:13px
-}
-.col-head h3{margin:0;font-size:15px}
-.count{
-  min-width:25px;height:25px;border-radius:99px;background:#202b38;
-  display:grid;place-items:center;color:#cbd5e1;font-size:12px;font-weight:800
-}
-.card{
-  border:1px solid #293646;background:#0d141c;border-radius:14px;
-  padding:15px;margin:10px 0
-}
-.card h4{margin:0 0 7px;font-size:15px}
-.small{font-size:12px;color:var(--muted)}
-.desc{color:#cbd5df;font-size:13px;line-height:1.5;white-space:pre-wrap}
-.badge{
-  display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;
-  font-weight:800;margin-bottom:9px
-}
-.badge.pending{background:rgba(240,173,78,.12);color:var(--pending)}
-.badge.building{background:rgba(77,163,255,.12);color:var(--building)}
-.badge.done{background:rgba(66,211,146,.12);color:var(--done)}
-.builder{padding:25px}
-.builder-top{
-  display:flex;justify-content:space-between;gap:15px;
-  align-items:center;margin-bottom:20px
-}
-.builder-top h2{margin:0}
-.table-wrap{overflow:auto}
-.table{width:100%;border-collapse:collapse;min-width:760px}
-.table th,.table td{
-  text-align:left;padding:13px 11px;border-bottom:1px solid #263241;
-  font-size:13px;vertical-align:top
-}
-.table th{
-  color:#91a0b1;font-size:11px;text-transform:uppercase;letter-spacing:.6px
-}
-.status-select{
-  border:1px solid #334255;background:#0c131b;color:#fff;
-  border-radius:8px;padding:7px
-}
-.delete{
-  border:1px solid #54313a;background:#24151a;color:#ff9aaa;
-  border-radius:8px;padding:7px 9px
-}
-.login{max-width:430px;margin:35px auto;padding:25px}
-.login h2{margin-top:0}
-.error{color:#ff8c9b;font-size:13px;margin-top:9px;display:none}
-.empty{text-align:center;color:var(--muted);padding:25px 10px;font-size:13px}
-.hidden{display:none!important}
-.footer{text-align:center;color:#667485;font-size:12px;margin-top:30px}
 
-@media(max-width:800px){
-  .grid,.columns{grid-template-columns:1fr}
-  .full{grid-column:auto}
-  .hero{display:block}
-  .nav-inner{align-items:flex-start;flex-direction:column}
-  .tabs{width:100%}
-  .tab{flex:1}
-  .builder-top{display:block}
-  .builder-top .small{margin-top:6px}
+.nav{
+ position:sticky;
+ top:0;
+ z-index:50;
+ border-bottom:1px solid var(--line);
+ background:#080c11e8;
+ backdrop-filter:blur(16px);
+}
+
+.nav-inner{
+ max-width:1240px;
+ margin:auto;
+ padding:15px 22px;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:18px;
+}
+
+.brand{
+ display:flex;
+ align-items:center;
+ gap:11px;
+ font-weight:900;
+}
+
+.logo{
+ width:43px;
+ height:43px;
+ border-radius:12px;
+ display:grid;
+ place-items:center;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+ font-size:21px;
+ box-shadow:0 8px 30px #0006;
+}
+
+.tabs{
+ display:flex;
+ gap:5px;
+ flex-wrap:wrap;
+}
+
+.tab{
+ border:1px solid transparent;
+ background:transparent;
+ color:var(--muted);
+ padding:10px 12px;
+ border-radius:10px;
+}
+
+.tab:hover,.tab.active{
+ background:#182433;
+ color:white;
+ border-color:#304156;
+}
+
+.container{
+ max-width:1240px;
+ margin:auto;
+ padding:32px 22px 60px;
+}
+
+.hero{
+ position:relative;
+ overflow:hidden;
+ padding:32px;
+ border:1px solid var(--line);
+ border-radius:22px;
+ background:linear-gradient(135deg,#121e2c,#0e151e);
+ margin-bottom:22px;
+}
+
+.hero:after{
+ content:"";
+ position:absolute;
+ right:-50px;
+ top:-70px;
+ width:200px;
+ height:200px;
+ border-radius:35px;
+ background:linear-gradient(135deg,#6ea8fe30,#8b7cff20);
+ transform:rotate(25deg);
+}
+
+.eyebrow{
+ color:#8eb8ff;
+ font-size:11px;
+ font-weight:900;
+ letter-spacing:1.7px;
+ margin-bottom:10px;
+}
+
+.hero h1{
+ font-size:clamp(31px,5vw,55px);
+ line-height:1;
+ margin:0 0 12px;
+}
+
+.hero p{
+ color:var(--muted);
+ max-width:720px;
+ margin:0;
+ line-height:1.6;
+}
+
+.stats{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:13px;
+ margin-bottom:22px;
+}
+
+.stat,.panel{
+ background:linear-gradient(180deg,#121b25f5,#0e151ef5);
+ border:1px solid var(--line);
+ border-radius:18px;
+}
+
+.stat{padding:18px}
+
+.stat span{
+ font-size:12px;
+ color:var(--muted);
+}
+
+.stat b{
+ display:block;
+ font-size:26px;
+ margin-top:5px;
+}
+
+.columns{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:16px;
+}
+
+.col{
+ padding:17px;
+ min-height:230px;
+}
+
+.col-head{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:12px;
+}
+
+.col-head h3{
+ margin:0;
+ font-size:15px;
+}
+
+.count{
+ min-width:26px;
+ height:26px;
+ border-radius:99px;
+ background:#202b38;
+ display:grid;
+ place-items:center;
+ font-size:12px;
+ font-weight:900;
+}
+
+.card{
+ border:1px solid #293646;
+ background:#0b121a;
+ border-radius:14px;
+ padding:15px;
+ margin:10px 0;
+}
+
+.card h4{
+ margin:6px 0 8px;
+}
+
+.badge{
+ display:inline-flex;
+ border-radius:999px;
+ padding:5px 8px;
+ font-size:11px;
+ font-weight:900;
+ margin-bottom:5px;
+}
+
+.badge.pending{
+ background:#f0ad4e18;
+ color:var(--yellow);
+}
+
+.badge.building{
+ background:#4da3ff18;
+ color:var(--blue);
+}
+
+.badge.done{
+ background:#42d39218;
+ color:var(--green);
+}
+
+.ticket{
+ color:#8eb8ff;
+ font-weight:900;
+ font-size:12px;
+}
+
+.meta,.small{
+ font-size:12px;
+ color:var(--muted);
+}
+
+.desc{
+ font-size:13px;
+ color:#cbd5df;
+ line-height:1.5;
+ white-space:pre-wrap;
+}
+
+.form,.builder,.help,.settings{
+ padding:24px;
+}
+
+.grid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:16px;
+}
+
+.full{
+ grid-column:1/-1;
+}
+
+.field label{
+ display:block;
+ font-size:13px;
+ font-weight:800;
+ margin-bottom:7px;
+}
+
+.field input,
+.field textarea,
+.field select{
+ width:100%;
+ border:1px solid #2c3b4c;
+ background:#0a1118;
+ color:#fff;
+ border-radius:11px;
+ padding:11px 12px;
+ outline:0;
+}
+
+.field textarea{
+ min-height:110px;
+ resize:vertical;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus{
+ border-color:var(--accent);
+}
+
+.counter{
+ text-align:right;
+ font-size:11px;
+ color:var(--muted);
+ margin-top:5px;
+}
+
+.notice{
+ padding:13px 15px;
+ border-radius:12px;
+ background:#101a26;
+ border:1px solid #29394b;
+ color:var(--muted);
+ font-size:13px;
+ margin-bottom:17px;
+}
+
+.actions{
+ display:flex;
+ justify-content:flex-end;
+ gap:9px;
+ margin-top:18px;
+}
+
+.primary,.secondary,.delete{
+ border-radius:10px;
+ padding:11px 15px;
+}
+
+.primary{
+ border:0;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+ color:#fff;
+ font-weight:900;
+}
+
+.primary:disabled{
+ opacity:.55;
+ cursor:not-allowed;
+}
+
+.secondary{
+ border:1px solid #334255;
+ background:#151e29;
+ color:#dfe7ef;
+}
+
+.delete{
+ border:1px solid #54313a;
+ background:#24151a;
+ color:#ff9aaa;
+}
+
+.hidden{
+ display:none!important;
+}
+
+.empty{
+ text-align:center;
+ color:var(--muted);
+ padding:25px 10px;
+ font-size:13px;
+}
+
+.builder-top{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:15px;
+ margin-bottom:18px;
+}
+
+.builder-top h2{
+ margin:0;
+}
+
+.table-wrap{
+ overflow:auto;
+}
+
+.table{
+ width:100%;
+ border-collapse:collapse;
+ min-width:1050px;
+}
+
+.table th,.table td{
+ text-align:left;
+ padding:12px 9px;
+ border-bottom:1px solid #263241;
+ font-size:13px;
+ vertical-align:top;
+}
+
+.table th{
+ color:#91a0b1;
+ font-size:10px;
+ text-transform:uppercase;
+ letter-spacing:.7px;
+}
+
+.status-select{
+ border:1px solid #334255;
+ background:#0c131b;
+ color:#fff;
+ border-radius:8px;
+ padding:7px;
+}
+
+.image-preview{
+ width:110px;
+ height:75px;
+ object-fit:cover;
+ border-radius:9px;
+ border:1px solid #344356;
+}
+
+.upload-box{
+ margin-top:8px;
+}
+
+.upload-box input{
+ font-size:11px;
+ max-width:180px;
+}
+
+.builder-tabs{
+ display:flex;
+ gap:6px;
+ border-bottom:1px solid var(--line);
+ padding-bottom:12px;
+ margin-bottom:18px;
+}
+
+.message{
+ border:1px solid #293646;
+ background:#0c141d;
+ border-radius:13px;
+ padding:15px;
+ margin:10px 0;
+}
+
+.message-head{
+ display:flex;
+ justify-content:space-between;
+ gap:10px;
+}
+
+.reply{
+ margin-top:12px;
+ border-left:3px solid var(--accent);
+ padding-left:12px;
+ color:#cbd5df;
+}
+
+.setting-row{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:20px;
+ padding:18px 0;
+ border-bottom:1px solid var(--line);
+}
+
+.setting-row:last-child{
+ border-bottom:0;
+}
+
+.switch{
+ width:48px;
+ height:27px;
+ border-radius:99px;
+ background:#303c4b;
+ border:0;
+ position:relative;
+}
+
+.switch.on{
+ background:#4d8ff7;
+}
+
+.switch:after{
+ content:"";
+ position:absolute;
+ width:21px;
+ height:21px;
+ top:3px;
+ left:3px;
+ border-radius:50%;
+ background:white;
+ transition:.2s;
+}
+
+.switch.on:after{
+ left:24px;
+}
+
+.login{
+ max-width:430px;
+ margin:20px auto;
+ padding:24px;
+}
+
+.error{
+ color:#ff8c9b;
+ font-size:13px;
+ margin-top:8px;
+}
+
+.footer{
+ text-align:center;
+ color:#667485;
+ font-size:12px;
+ margin-top:28px;
+}
+
+.connection{
+ display:none;
+ padding:12px 15px;
+ margin-bottom:18px;
+ border-radius:12px;
+ background:#24151a;
+ border:1px solid #54313a;
+ color:#ffb2bd;
+ font-size:13px;
+}
+
+@media(max-width:850px){
+
+ .stats{
+  grid-template-columns:1fr 1fr;
+ }
+
+ .columns,.grid{
+  grid-template-columns:1fr;
+ }
+
+ .full{
+  grid-column:auto;
+ }
+
+ .nav-inner{
+  align-items:flex-start;
+  flex-direction:column;
+ }
+
+ .tabs{
+  width:100%;
+ }
+
+ .tab{
+  flex:1;
+ }
+
+ .builder-top{
+  display:block;
+ }
 }
 </style>
 </head>
@@ -156,245 +567,561 @@ button{cursor:pointer}
 <body>
 
 <header class="nav">
-  <div class="nav-inner">
+<div class="nav-inner">
 
-    <div class="brand">
-      <div class="logo">B</div>
-      <div>
-        BuildHz
-        <span style="color:#77879a;font-weight:600">/ Minecraft</span>
-      </div>
-    </div>
+<div class="brand">
+<div class="logo">B</div>
+<div>
+BuildHz
+<span style="color:#77879a;font-weight:600"> / Minecraft</span>
+</div>
+</div>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="jobs">Ver Trabajos</button>
-      <button class="tab" data-tab="request">Pedir un Trabajo</button>
-      <button class="tab" data-tab="builder">Panel Builder</button>
-    </nav>
+<nav class="tabs">
 
-  </div>
+<button class="tab active" data-tab="jobs">
+Ver Trabajos
+</button>
+
+<button class="tab" data-tab="request">
+Pedir un Trabajo
+</button>
+
+<button class="tab" data-tab="help">
+Comunicación / Ayuda
+</button>
+
+<button class="tab" data-tab="builder">
+Panel Builder
+</button>
+
+</nav>
+
+</div>
 </header>
 
 <main class="container">
+
+<div id="connectionError" class="connection"></div>
 
 <!-- TRABAJOS -->
 
 <section id="jobs" class="section">
 
-  <div class="hero">
-    <div>
-      <h1>Trabajos de construcción</h1>
-      <p>
-        Consulta el estado de los pedidos y revisa qué construcciones están
-        pendientes, en construcción o terminadas.
-      </p>
-    </div>
-  </div>
+<div class="hero">
 
-  <div class="columns">
+<div class="eyebrow">
+BUILDHZ • MINECRAFT BUILDING
+</div>
 
-    <div class="panel col">
-      <div class="col-head">
-        <h3>⏳ Pendiente</h3>
-        <span class="count" id="count-pending">0</span>
-      </div>
-      <div id="pending">
-        <div class="empty">Cargando...</div>
-      </div>
-    </div>
+<h1>
+Construcciones para tu servidor.
+</h1>
 
-    <div class="panel col">
-      <div class="col-head">
-        <h3>🔨 En construcción</h3>
-        <span class="count" id="count-building">0</span>
-      </div>
-      <div id="building">
-        <div class="empty">Cargando...</div>
-      </div>
-    </div>
+<p>
+Consulta pedidos pendientes, construcciones en proceso y trabajos terminados.
+</p>
 
-    <div class="panel col">
-      <div class="col-head">
-        <h3>✓ Terminado</h3>
-        <span class="count" id="count-done">0</span>
-      </div>
-      <div id="done">
-        <div class="empty">Cargando...</div>
-      </div>
-    </div>
+</div>
 
-  </div>
+<div class="stats">
+
+<div class="stat">
+<span>Pedidos totales</span>
+<b id="stat-total">0</b>
+</div>
+
+<div class="stat">
+<span>Pendientes</span>
+<b id="stat-pending">0</b>
+</div>
+
+<div class="stat">
+<span>En construcción</span>
+<b id="stat-building">0</b>
+</div>
+
+<div class="stat">
+<span>Terminados</span>
+<b id="stat-done">0</b>
+</div>
+
+</div>
+
+<div class="columns">
+
+<div class="panel col">
+
+<div class="col-head">
+<h3>⏳ Pendiente</h3>
+<span class="count" id="count-pending">0</span>
+</div>
+
+<div id="pending"></div>
+
+</div>
+
+<div class="panel col">
+
+<div class="col-head">
+<h3>🔨 En construcción</h3>
+<span class="count" id="count-building">0</span>
+</div>
+
+<div id="building"></div>
+
+</div>
+
+<div class="panel col">
+
+<div class="col-head">
+<h3>✓ Terminado</h3>
+<span class="count" id="count-done">0</span>
+</div>
+
+<div id="done"></div>
+
+</div>
+
+</div>
 
 </section>
 
 
-<!-- PEDIR TRABAJO -->
+<!-- PEDIR -->
 
 <section id="request" class="section hidden">
 
-  <div class="hero">
-    <div>
-      <h1>Pedir un trabajo</h1>
-      <p>Completa los datos para enviar tu solicitud al Builder.</p>
-    </div>
-  </div>
+<div class="hero">
 
-  <div class="panel form">
+<div class="eyebrow">
+NUEVO PEDIDO
+</div>
 
-    <div class="notice">
-      Los campos marcados con * son obligatorios.
-    </div>
+<h1>
+Pedir un trabajo
+</h1>
 
-    <form id="requestForm">
+<p>
+Describe tu construcción y envía la solicitud al Builder.
+</p>
 
-      <div class="grid">
+</div>
 
-        <div class="field">
-          <label>Tu usuario de Minecraft *</label>
-          <input
-            id="username"
-            maxlength="32"
-            required
-            placeholder="Ej. Steve123"
-          >
-        </div>
+<div class="panel form">
 
-        <div class="field">
-          <label>Pago dentro del servidor *</label>
-          <input
-            id="payment"
-            maxlength="60"
-            required
-            placeholder="Ej. 50,000 monedas"
-          >
-        </div>
+<div class="notice">
+El límite de caracteres puede ser modificado por el Builder desde Ajustes.
+</div>
 
-        <div class="field full">
-          <label>¿Qué quieres que construya? *</label>
-          <textarea
-            id="what"
-            required
-            placeholder="Describe la construcción, tamaño, ubicación, estilo, materiales, etc."
-          ></textarea>
-        </div>
+<form id="requestForm">
 
-      </div>
+<div class="grid">
 
-      <div class="actions">
+<div class="field">
 
-        <button type="reset" class="secondary">
-          Limpiar
-        </button>
+<label>
+Tu usuario de Minecraft *
+</label>
 
-        <button class="primary" type="submit" id="submitBtn">
-          Enviar pedido
-        </button>
+<input
+id="username"
+maxlength="32"
+required
+placeholder="Ej. Steve123"
+>
 
-      </div>
+</div>
 
-    </form>
+<div class="field">
 
-  </div>
+<label>
+Pago dentro del servidor *
+</label>
+
+<input
+id="payment"
+maxlength="60"
+required
+placeholder="Ej. 50,000 monedas"
+>
+
+</div>
+
+<div class="field full">
+
+<label>
+¿Qué querés que construya? *
+</label>
+
+<textarea
+id="what"
+required
+placeholder="Describí tu construcción..."
+></textarea>
+
+<div class="counter">
+
+<span id="charCount">0</span>
+ /
+<span id="maxCharDisplay">200</span>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="actions">
+
+<button
+type="reset"
+class="secondary"
+>
+Limpiar
+</button>
+
+<button
+type="submit"
+class="primary"
+id="submitBtn"
+>
+Enviar pedido
+</button>
+
+</div>
+
+</form>
+
+</div>
 
 </section>
 
 
-<!-- PANEL BUILDER -->
+<!-- AYUDA -->
+
+<section id="help" class="section hidden">
+
+<div class="hero">
+
+<div class="eyebrow">
+SOPORTE BUILDHZ
+</div>
+
+<h1>
+Comunicación / Ayuda
+</h1>
+
+<p>
+¿Tenés una duda o necesitás comunicarte con el Builder?
+</p>
+
+</div>
+
+<div class="panel help">
+
+<form id="helpForm">
+
+<div class="grid">
+
+<div class="field">
+
+<label>
+Número de ticket
+</label>
+
+<input
+id="helpTicket"
+placeholder="Ej. #BZ-1234"
+>
+</div>
+
+<div class="field">
+
+<label>
+Usuario de Minecraft *
+</label>
+
+<input
+id="helpName"
+maxlength="32"
+required
+>
+
+</div>
+
+<div class="field full">
+
+<label>
+Mensaje *
+</label>
+
+<textarea
+id="helpMessage"
+maxlength="500"
+required
+placeholder="Escribí qué necesitás..."
+></textarea>
+
+</div>
+
+</div>
+
+<div class="actions">
+
+<button
+class="primary"
+type="submit"
+id="helpBtn"
+>
+Enviar mensaje
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</section>
+
+
+<!-- BUILDER -->
 
 <section id="builder" class="section hidden">
 
-  <div id="loginBox" class="panel login">
+<div id="loginBox" class="panel login">
 
-    <h2>Panel Builder</h2>
+<h2>
+Panel Builder
+</h2>
 
-    <p class="small">
-      Introduce el código de acceso para administrar los pedidos.
-    </p>
+<p class="small">
+Introduce el código de acceso para administrar BuildHz.
+</p>
 
-    <div class="field">
-      <label>Código</label>
+<div class="field">
 
-      <input
-        id="builderCode"
-        type="password"
-        inputmode="numeric"
-        maxlength="12"
-        placeholder="Código de acceso"
-      >
-    </div>
+<label>
+Código
+</label>
 
-    <div class="actions">
+<input
+id="builderCode"
+type="password"
+maxlength="12"
+placeholder="Código de acceso"
+>
 
-      <button class="primary" id="loginBtn">
-        Entrar al panel
-      </button>
+</div>
 
-    </div>
+<div class="actions">
 
-    <div class="error" id="loginError">
-      Código incorrecto.
-    </div>
+<button
+class="primary"
+id="loginBtn"
+>
+Entrar al panel
+</button>
 
-  </div>
+</div>
+
+<div
+class="error hidden"
+id="loginError"
+>
+Código incorrecto.
+</div>
+
+</div>
 
 
-  <div id="builderPanel" class="panel builder hidden">
+<div id="builderPanel" class="hidden">
 
-    <div class="builder-top">
+<div class="panel builder">
 
-      <div>
+<div class="builder-top">
 
-        <h2>Administración de pedidos</h2>
+<div>
 
-        <div class="small">
-          Administra los pedidos guardados en Supabase.
-        </div>
+<h2>
+Panel Builder
+</h2>
 
-      </div>
+<div class="small">
+Administración de pedidos, comunicación y ajustes.
+</div>
 
-      <button class="secondary" id="logoutBtn">
-        Cerrar sesión
-      </button>
+</div>
 
-    </div>
+<button
+class="secondary"
+id="logoutBtn"
+>
+Cerrar sesión
+</button>
 
-    <div class="table-wrap">
+</div>
 
-      <table class="table">
 
-        <thead>
+<div class="builder-tabs">
 
-          <tr>
-            <th>Usuario</th>
-            <th>Trabajo</th>
-            <th>Pago</th>
-            <th>Estado</th>
-            <th>Acción</th>
-          </tr>
+<button
+class="tab active"
+data-builder-tab="orders"
+>
+Pedidos
+</button>
 
-        </thead>
+<button
+class="tab"
+data-builder-tab="messages"
+>
+Comunicación
+</button>
 
-        <tbody id="ordersTable">
+<button
+class="tab"
+data-builder-tab="settings"
+>
+Ajustes
+</button>
 
-          <tr>
-            <td colspan="5" class="empty">
-              Cargando pedidos...
-            </td>
-          </tr>
+</div>
 
-        </tbody>
 
-      </table>
+<!-- PEDIDOS BUILDER -->
 
-    </div>
+<div id="builderOrders">
 
-  </div>
+<div class="table-wrap">
+
+<table class="table">
+
+<thead>
+
+<tr>
+
+<th>Ticket</th>
+<th>Usuario</th>
+<th>Trabajo</th>
+<th>Pago</th>
+<th>Estado</th>
+<th>Imagen</th>
+<th>Acción</th>
+
+</tr>
+
+</thead>
+
+<tbody id="ordersTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<!-- MENSAJES -->
+
+<div
+id="builderMessages"
+class="hidden"
+>
+
+<div id="messagesList"></div>
+
+</div>
+
+
+<!-- AJUSTES -->
+
+<div
+id="builderSettings"
+class="hidden"
+>
+
+<div class="notice">
+Estos ajustes se guardan en Supabase.
+</div>
+
+<div class="setting-row">
+
+<div>
+
+<b>
+Números de ticket
+</b>
+
+<div class="small">
+Activa o desactiva los números de ticket.
+</div>
+
+</div>
+
+<button
+class="switch"
+id="ticketSwitch"
+>
+</button>
+
+</div>
+
+
+<div class="setting-row">
+
+<div>
+
+<b>
+Límite de caracteres
+</b>
+
+<div class="small">
+Límite máximo para describir un pedido.
+</div>
+
+</div>
+
+<div style="display:flex;gap:8px">
+
+<input
+id="maxCharsInput"
+type="number"
+min="20"
+max="5000"
+style="
+width:110px;
+border:1px solid #334255;
+background:#0c131b;
+color:#fff;
+border-radius:8px;
+padding:8px
+"
+>
+
+<button
+class="primary"
+id="saveSettingsBtn"
+>
+Guardar
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
 
 </section>
 
 
 <div class="footer">
-  BuildHz · Sistema de pedidos para construcciones de Minecraft
+BuildHz · Minecraft Building Services
 </div>
 
 </main>
@@ -402,658 +1129,1806 @@ button{cursor:pointer}
 
 <script>
 
-/* =========================
+/* =====================================================
    SUPABASE
-   ========================= */
+===================================================== */
 
 const SUPABASE_URL =
-  "https://hkpcggtscuywsnrlzrkb.supabase.co";
+"https://hkpcggtscuywsnrlzrkb.supabase.co";
+
+/*
+   PEGÁ TU PUBLISHABLE KEY AQUÍ
+*/
 
 const SUPABASE_KEY =
-  "sb_publishable_9LwhivwgtcAGwZW8R5h9Zg_YLXEG62w";
+"sb_publishable_9LwhivwgtcAGwZW8R5h9Zg_YLXEG62w";
 
 
 const supabaseClient =
-  window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
 
+
+/* =====================================================
+   VARIABLES
+===================================================== */
 
 let orders = [];
+let messages = [];
+
+let settings = {
+ tickets_enabled:true,
+ max_characters:200
+};
 
 
-/* =========================
-   SEGURIDAD HTML
-   ========================= */
+/* =====================================================
+   ERROR DE CONEXIÓN
+===================================================== */
 
-function esc(value){
+function showConnectionError(message){
 
-  return String(value ?? "").replace(
-    /[&<>"']/g,
-    function(m){
+const box =
+document.getElementById(
+"connectionError"
+);
 
-      return {
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#039;"
-      }[m];
+box.textContent =
+"Error de Supabase: " +
+message;
 
-    }
-  );
+box.style.display = "block";
 
 }
 
 
-/* =========================
-   ESTADOS
-   ========================= */
+/* =====================================================
+   ESCAPAR HTML
+===================================================== */
+
+function esc(value){
+
+return String(value ?? "").replace(
+/[&<>"']/g,
+m => ({
+ "&":"&amp;",
+ "<":"&lt;",
+ ">":"&gt;",
+ '"':"&quot;",
+ "'":"&#039;"
+}[m])
+);
+
+}
+
+
+/* =====================================================
+   ESTADO
+===================================================== */
 
 function normalizeStatus(status){
 
-  const s = String(status ?? "").toLowerCase().trim();
+const s =
+String(status ?? "")
+.toLowerCase()
+.trim();
 
-  if(s === "building" || s === "en construcción" || s === "en construccion"){
-    return "building";
-  }
+if(
+s === "building" ||
+s === "en construcción" ||
+s === "en construccion"
+)
+return "building";
 
-  if(s === "done" || s === "terminado"){
-    return "done";
-  }
+if(
+s === "done" ||
+s === "terminado"
+)
+return "done";
 
-  return "pending";
+return "pending";
 
 }
 
 
 function statusLabel(status){
 
-  if(status === "building")
-    return "En construcción";
+status =
+normalizeStatus(status);
 
-  if(status === "done")
-    return "Terminado";
+if(status === "building")
+return "En construcción";
 
-  return "Pendiente";
+if(status === "done")
+return "Terminado";
+
+return "Pendiente";
 
 }
 
 
-/* =========================
-   CARGAR PEDIDOS
-   ========================= */
+/* =====================================================
+   TICKET
+===================================================== */
+
+function ticketFor(order){
+
+if(order.ticket)
+return order.ticket;
+
+return "#BZ-" +
+String(order.id)
+.slice(-4)
+.padStart(4,"0");
+
+}
+
+
+/* =====================================================
+   AJUSTES
+===================================================== */
+
+async function loadSettings(){
+
+try{
+
+const {data,error} =
+await supabaseClient
+.from("buildhz_settings")
+.select("*")
+.eq("id",1)
+.maybeSingle();
+
+if(error){
+
+console.error(
+"Error ajustes:",
+error
+);
+
+showConnectionError(
+error.message
+);
+
+return;
+
+}
+
+if(data){
+
+settings.tickets_enabled =
+Boolean(data.tickets_enabled);
+
+settings.max_characters =
+Number(data.max_characters) || 200;
+
+}
+
+setMaxCharacters();
+
+document
+.getElementById("ticketSwitch")
+.classList
+.toggle(
+"on",
+settings.tickets_enabled
+);
+
+}catch(error){
+
+console.error(error);
+
+}
+
+}
+
+
+function setMaxCharacters(){
+
+const n =
+Math.max(
+20,
+Number(settings.max_characters) || 200
+);
+
+document
+.getElementById("what")
+.maxLength = n;
+
+document
+.getElementById("maxCharDisplay")
+.textContent = n;
+
+document
+.getElementById("maxCharsInput")
+.value = n;
+
+updateCounter();
+
+}
+
+
+/* =====================================================
+   PEDIDOS
+===================================================== */
 
 async function loadOrders(){
 
-  const { data, error } =
-    await supabaseClient
-      .from("pedidos")
-      .select("*")
-      .order("created_at", {
-        ascending:false
-      });
+try{
 
+const {data,error} =
+await supabaseClient
+.from("pedidos")
+.select("*")
+.order(
+"created_at",
+{
+ascending:false
+}
+);
 
-  if(error){
+if(error){
 
-    console.error("ERROR SUPABASE:", error);
+console.error(
+"Error cargando pedidos:",
+error
+);
 
-    document.getElementById("pending").innerHTML =
-      '<div class="empty">Error al cargar pedidos.</div>';
+showConnectionError(
+error.message
+);
 
-    document.getElementById("building").innerHTML =
-      '<div class="empty">Error al cargar pedidos.</div>';
+return;
 
-    document.getElementById("done").innerHTML =
-      '<div class="empty">Error al cargar pedidos.</div>';
+}
 
-    return;
+orders =
+(data || []).map(o => ({
 
-  }
+id:o.id,
 
+ticket:o.ticket || null,
 
-  orders = (data || []).map(function(o){
+username:o.nombre || "",
 
-    return {
-      id:o.id,
-      username:o.nombre,
-      payment:o.pago,
-      what:o.pedido,
-      status:normalizeStatus(o.estado),
-      created_at:o.created_at
-    };
+payment:o.pago || "",
 
-  });
+what:o.pedido || "",
 
+status:normalizeStatus(o.estado),
 
-  render();
+imagen_url:o.imagen_url || null,
+
+created_at:o.created_at
+
+}));
+
+render();
+
+}catch(error){
+
+console.error(error);
+
+showConnectionError(
+error.message
+);
+
+}
 
 }
 
 
-/* =========================
-   TARJETA PÚBLICA
-   ========================= */
+/* =====================================================
+   TARJETAS PÚBLICAS
+===================================================== */
 
 function publicCard(order){
 
-  return `
-    <div class="card">
+let image = "";
 
-      <span class="badge ${order.status}">
-        ${statusLabel(order.status)}
-      </span>
+if(order.imagen_url){
 
-      <h4>
-        ${esc(order.what)}
-      </h4>
+image = `
 
-    </div>
-  `;
+<img
+src="${esc(order.imagen_url)}"
+style="
+width:100%;
+height:180px;
+object-fit:cover;
+border-radius:10px;
+margin-top:10px;
+border:1px solid #344356;
+"
+>
+
+`;
+
+}
+
+return `
+
+<div class="card">
+
+<span class="badge ${order.status}">
+${statusLabel(order.status)}
+</span>
+
+${
+settings.tickets_enabled
+?
+`<div class="ticket">
+${esc(ticketFor(order))}
+</div>`
+:
+""
+}
+
+<h4>
+${esc(order.what)}
+</h4>
+
+${image}
+
+</div>
+
+`;
 
 }
 
 
-/* =========================
-   MOSTRAR TODO
-   ========================= */
+/* =====================================================
+   RENDER
+===================================================== */
 
 function render(){
 
-  const groups = {
-    pending:[],
-    building:[],
-    done:[]
-  };
+const groups = {
+ pending:[],
+ building:[],
+ done:[]
+};
+
+orders.forEach(order => {
+
+groups[
+normalizeStatus(order.status)
+].push(order);
+
+});
 
 
-  orders.forEach(function(order){
+["pending","building","done"]
+.forEach(status => {
 
-    const status =
-      normalizeStatus(order.status);
+const box =
+document.getElementById(status);
 
-    groups[status].push(order);
+const count =
+document.getElementById(
+"count-" + status
+);
 
-  });
+count.textContent =
+groups[status].length;
 
+box.innerHTML =
+groups[status].length
 
-  ["pending","building","done"].forEach(function(status){
+?
+groups[status]
+.map(publicCard)
+.join("")
 
-    const box =
-      document.getElementById(status);
+:
+'<div class="empty">No hay trabajos aquí.</div>';
 
-    const counter =
-      document.getElementById(
-        "count-" + status
-      );
-
-
-    counter.textContent =
-      groups[status].length;
-
-
-    if(groups[status].length){
-
-      box.innerHTML =
-        groups[status]
-          .map(publicCard)
-          .join("");
-
-    }else{
-
-      box.innerHTML =
-        '<div class="empty">No hay trabajos aquí.</div>';
-
-    }
-
-  });
+});
 
 
-  renderBuilderTable();
+document.getElementById(
+"stat-total"
+).textContent =
+orders.length;
 
-}
+document.getElementById(
+"stat-pending"
+).textContent =
+groups.pending.length;
 
+document.getElementById(
+"stat-building"
+).textContent =
+groups.building.length;
 
-/* =========================
-   PANEL BUILDER
-   ========================= */
-
-function renderBuilderTable(){
-
-  const table =
-    document.getElementById("ordersTable");
-
-
-  if(!orders.length){
-
-    table.innerHTML = `
-      <tr>
-        <td colspan="5" class="empty">
-          Todavía no hay pedidos.
-        </td>
-      </tr>
-    `;
-
-    return;
-
-  }
+document.getElementById(
+"stat-done"
+).textContent =
+groups.done.length;
 
 
-  table.innerHTML =
-    orders.map(function(order){
-
-      return `
-        <tr>
-
-          <td>
-            <b>${esc(order.username)}</b>
-          </td>
-
-          <td>
-            <div class="desc">
-              ${esc(order.what)}
-            </div>
-          </td>
-
-          <td>
-            ${esc(order.payment)}
-          </td>
-
-          <td>
-
-            <select
-              class="status-select"
-              onchange="changeStatus(${order.id}, this.value)"
-            >
-
-              <option value="pending"
-                ${order.status === "pending" ? "selected" : ""}>
-                Pendiente
-              </option>
-
-              <option value="building"
-                ${order.status === "building" ? "selected" : ""}>
-                En construcción
-              </option>
-
-              <option value="done"
-                ${order.status === "done" ? "selected" : ""}>
-                Terminado
-              </option>
-
-            </select>
-
-          </td>
-
-          <td>
-
-            <button
-              class="delete"
-              onclick="removeOrder(${order.id})"
-            >
-              Eliminar
-            </button>
-
-          </td>
-
-        </tr>
-      `;
-
-    }).join("");
+renderOrdersTable();
 
 }
 
 
-/* =========================
+/* =====================================================
+   TABLA BUILDER
+===================================================== */
+
+function renderOrdersTable(){
+
+const table =
+document.getElementById(
+"ordersTable"
+);
+
+if(!orders.length){
+
+table.innerHTML = `
+
+<tr>
+
+<td
+colspan="7"
+class="empty"
+>
+Todavía no hay pedidos.
+</td>
+
+</tr>
+
+`;
+
+return;
+
+}
+
+
+table.innerHTML =
+orders.map(order => `
+
+<tr>
+
+<td class="ticket">
+
+${
+settings.tickets_enabled
+?
+esc(ticketFor(order))
+:
+"—"
+}
+
+</td>
+
+<td>
+<b>
+${esc(order.username)}
+</b>
+</td>
+
+<td>
+
+<div class="desc">
+${esc(order.what)}
+</div>
+
+</td>
+
+<td>
+${esc(order.payment)}
+</td>
+
+<td>
+
+<select
+class="status-select"
+onchange="changeStatus(${JSON.stringify(order.id)},this.value)"
+>
+
+<option
+value="pending"
+${order.status==="pending"?"selected":""}
+>
+Pendiente
+</option>
+
+<option
+value="building"
+${order.status==="building"?"selected":""}
+>
+En construcción
+</option>
+
+<option
+value="done"
+${order.status==="done"?"selected":""}
+>
+Terminado
+</option>
+
+</select>
+
+</td>
+
+<td>
+
+${
+order.imagen_url
+?
+`
+<img
+src="${esc(order.imagen_url)}"
+class="image-preview"
+>
+`
+:
+""
+}
+
+<div class="upload-box">
+
+<input
+type="file"
+accept="image/*"
+onchange="uploadImage(${JSON.stringify(order.id)},this)"
+>
+
+</div>
+
+</td>
+
+<td>
+
+<button
+class="delete"
+onclick="removeOrder(${JSON.stringify(order.id)})"
+>
+Eliminar
+</button>
+
+</td>
+
+</tr>
+
+`).join("");
+
+}
+
+
+/* =====================================================
    CAMBIAR ESTADO
-   ========================= */
+===================================================== */
 
-async function changeStatus(id,newStatus){
+async function changeStatus(
+id,
+newStatus
+){
 
-  const { error } =
-    await supabaseClient
-      .from("pedidos")
-      .update({
-        estado:newStatus
-      })
-      .eq("id",id);
+const {error} =
+await supabaseClient
+.from("pedidos")
+.update({
+ estado:newStatus
+})
+.eq("id",id);
 
+if(error){
 
-  if(error){
+console.error(
+"Error estado:",
+error
+);
 
-    console.error(error);
+alert(
+"No se pudo cambiar el estado.\n\n" +
+error.message
+);
 
-    alert("No se pudo cambiar el estado.");
+return;
 
-    return;
+}
 
-  }
-
-
-  await loadOrders();
+await loadOrders();
 
 }
 
 
-/* =========================
+/* =====================================================
+   SUBIR IMAGEN
+===================================================== */
+
+async function uploadImage(
+id,
+input
+){
+
+const file =
+input.files?.[0];
+
+if(!file)
+return;
+
+
+if(
+!file.type.startsWith("image/")
+){
+
+alert(
+"Seleccioná una imagen válida."
+);
+
+input.value = "";
+
+return;
+
+}
+
+
+if(
+file.size >
+8 * 1024 * 1024
+){
+
+alert(
+"La imagen debe pesar menos de 8 MB."
+);
+
+input.value = "";
+
+return;
+
+}
+
+
+try{
+
+const extension =
+(
+file.name
+.split(".")
+.pop() || "jpg"
+)
+.toLowerCase()
+.replace(/[^a-z0-9]/g,"");
+
+
+const path =
+`orders/${Date.now()}-${Math.random()
+.toString(36)
+.slice(2)}.${extension}`;
+
+
+const upload =
+await supabaseClient
+.storage
+.from("buildhz-images")
+.upload(
+path,
+file,
+{
+upsert:false,
+contentType:file.type
+}
+);
+
+
+if(upload.error){
+
+console.error(
+"Error Storage:",
+upload.error
+);
+
+alert(
+"No se pudo subir la imagen.\n\n" +
+upload.error.message
+);
+
+return;
+
+}
+
+
+const {data} =
+supabaseClient
+.storage
+.from("buildhz-images")
+.getPublicUrl(path);
+
+
+if(!data?.publicUrl){
+
+alert(
+"No se pudo obtener la URL de la imagen."
+);
+
+return;
+
+}
+
+
+const {error} =
+await supabaseClient
+.from("pedidos")
+.update({
+ imagen_url:data.publicUrl
+})
+.eq("id",id);
+
+
+if(error){
+
+console.error(
+"Error guardando imagen:",
+error
+);
+
+alert(
+"La imagen se subió, pero no se pudo guardar en el pedido.\n\n" +
+error.message
+);
+
+return;
+
+}
+
+await loadOrders();
+
+alert(
+"Imagen subida correctamente."
+);
+
+}catch(error){
+
+console.error(error);
+
+alert(
+"Error al subir la imagen:\n\n" +
+error.message
+);
+
+}
+
+}
+
+
+/* =====================================================
    ELIMINAR
-   ========================= */
+===================================================== */
 
 async function removeOrder(id){
 
-  const order =
-    orders.find(function(o){
-      return String(o.id) === String(id);
-    });
+const order =
+orders.find(
+o =>
+String(o.id) === String(id)
+);
+
+if(!order)
+return;
 
 
-  if(!order)
-    return;
+const ok =
+confirm(
+"¿Seguro que querés eliminar este pedido?\n\n" +
+"Ticket: " +
+ticketFor(order) +
+"\nUsuario: " +
+order.username +
+"\nTrabajo: " +
+order.what +
+"\n\nEsta acción no se puede deshacer."
+);
+
+if(!ok)
+return;
 
 
-  const ok =
-    confirm(
-      "¿Seguro que quieres eliminar este pedido?\n\n" +
-      "Usuario: " + order.username + "\n" +
-      "Trabajo: " + order.what + "\n\n" +
-      "Esta acción no se puede deshacer."
-    );
+const {error} =
+await supabaseClient
+.from("pedidos")
+.delete()
+.eq("id",id);
 
 
-  if(!ok)
-    return;
+if(error){
 
+console.error(error);
 
-  const { error } =
-    await supabaseClient
-      .from("pedidos")
-      .delete()
-      .eq("id",id);
+alert(
+"No se pudo eliminar el pedido.\n\n" +
+error.message
+);
 
+return;
 
-  if(error){
+}
 
-    console.error(error);
-
-    alert("No se pudo eliminar el pedido.");
-
-    return;
-
-  }
-
-
-  await loadOrders();
+await loadOrders();
 
 }
 
 
-/* =========================
+/* =====================================================
+   CONTADOR
+===================================================== */
+
+function updateCounter(){
+
+const value =
+document.getElementById(
+"what"
+).value.length;
+
+document.getElementById(
+"charCount"
+).textContent =
+value;
+
+}
+
+
+/* =====================================================
    ENVIAR PEDIDO
-   ========================= */
+===================================================== */
 
 document
-  .getElementById("requestForm")
-  .addEventListener(
-    "submit",
-    async function(event){
+.getElementById("requestForm")
+.addEventListener(
+"submit",
+async event => {
 
-      event.preventDefault();
-
-
-      const username =
-        document
-          .getElementById("username")
-          .value
-          .trim();
+event.preventDefault();
 
 
-      const payment =
-        document
-          .getElementById("payment")
-          .value
-          .trim();
+const username =
+document
+.getElementById("username")
+.value
+.trim();
 
 
-      const what =
-        document
-          .getElementById("what")
-          .value
-          .trim();
+const payment =
+document
+.getElementById("payment")
+.value
+.trim();
 
 
-      const button =
-        document.getElementById("submitBtn");
+const what =
+document
+.getElementById("what")
+.value
+.trim();
 
 
-      button.disabled = true;
-      button.textContent = "Enviando...";
+if(!username){
+
+alert(
+"Escribí tu usuario de Minecraft."
+);
+
+return;
+
+}
 
 
-      const { error } =
-        await supabaseClient
-          .from("pedidos")
-          .insert({
+if(!payment){
 
-            nombre:username,
-            pedido:what,
-            pago:payment,
-            estado:"pending"
+alert(
+"Escribí el pago."
+);
 
-          });
+return;
+
+}
 
 
-      button.disabled = false;
-      button.textContent = "Enviar pedido";
+if(!what){
+
+alert(
+"Describí qué querés que construya."
+);
+
+return;
+
+}
 
 
-      if(error){
+if(
+what.length >
+settings.max_characters
+){
 
-        console.error(
-          "ERROR AL INSERTAR:",
-          error
-        );
+alert(
+"El pedido no puede superar " +
+settings.max_characters +
+" caracteres."
+);
 
-        alert(
-          "No se pudo enviar el pedido.\n\n" +
-          "Revisá la conexión con Supabase."
-        );
+return;
 
-        return;
-
-      }
-
-
-      document
-        .getElementById("requestForm")
-        .reset();
+}
 
 
-      alert(
-        "¡Pedido enviado correctamente!"
-      );
+const button =
+document.getElementById(
+"submitBtn"
+);
+
+button.disabled = true;
+button.textContent =
+"Enviando...";
 
 
-      await loadOrders();
+try{
+
+let ticket = null;
+
+if(settings.tickets_enabled){
+
+ticket =
+"#BZ-" +
+Math.floor(
+1000 +
+Math.random() *
+9000
+);
+
+}
 
 
-      document
-        .querySelector('[data-tab="jobs"]')
-        .click();
+const pedidoData = {
 
-    }
-  );
+nombre:username,
+
+pedido:what,
+
+pago:payment,
+
+estado:"pending"
+
+};
 
 
-/* =========================
+/*
+Solo agrega ticket cuando
+está activado.
+*/
+
+if(settings.tickets_enabled){
+
+pedidoData.ticket =
+ticket;
+
+}
+
+
+console.log(
+"Enviando pedido:",
+pedidoData
+);
+
+
+const {data,error} =
+await supabaseClient
+.from("pedidos")
+.insert(pedidoData)
+.select()
+.single();
+
+
+if(error){
+
+console.error(
+"ERROR SUPABASE:",
+error
+);
+
+alert(
+"NO SE PUDO ENVIAR EL PEDIDO\n\n" +
+"Mensaje: " +
+(error.message || "Error desconocido") +
+"\n\nCódigo: " +
+(error.code || "N/A") +
+"\n\nDetalles: " +
+(error.details || "N/A")
+);
+
+return;
+
+}
+
+
+event.target.reset();
+
+updateCounter();
+
+await loadOrders();
+
+
+if(
+settings.tickets_enabled &&
+data
+){
+
+alert(
+"¡PEDIDO ENVIADO CORRECTAMENTE!\n\n" +
+"Tu número de ticket es:\n\n" +
+data.ticket +
+"\n\nGuardalo para comunicarte con el Builder."
+);
+
+}else{
+
+alert(
+"¡PEDIDO ENVIADO CORRECTAMENTE!"
+);
+
+}
+
+
+document
+.querySelector(
+'[data-tab="jobs"]'
+)
+.click();
+
+
+}catch(error){
+
+console.error(
+"ERROR GENERAL:",
+error
+);
+
+alert(
+"OCURRIÓ UN ERROR\n\n" +
+(error.message || error)
+);
+
+}finally{
+
+button.disabled = false;
+button.textContent =
+"Enviar pedido";
+
+}
+
+}
+);
+
+
+/* =====================================================
+   COMUNICACIÓN
+===================================================== */
+
+document
+.getElementById("helpForm")
+.addEventListener(
+"submit",
+async event => {
+
+event.preventDefault();
+
+
+const button =
+document.getElementById(
+"helpBtn"
+);
+
+button.disabled = true;
+button.textContent =
+"Enviando...";
+
+
+const ticket =
+document
+.getElementById("helpTicket")
+.value
+.trim();
+
+
+const nombre =
+document
+.getElementById("helpName")
+.value
+.trim();
+
+
+const mensaje =
+document
+.getElementById("helpMessage")
+.value
+.trim();
+
+
+if(!nombre || !mensaje){
+
+alert(
+"Completá los campos obligatorios."
+);
+
+button.disabled = false;
+button.textContent =
+"Enviar mensaje";
+
+return;
+
+}
+
+
+try{
+
+const {error} =
+await supabaseClient
+.from("buildhz_comunicaciones")
+.insert({
+
+ticket:
+ticket || null,
+
+nombre:nombre,
+
+mensaje:mensaje
+
+});
+
+
+if(error){
+
+console.error(error);
+
+alert(
+"No se pudo enviar el mensaje.\n\n" +
+error.message
+);
+
+return;
+
+}
+
+
+event.target.reset();
+
+alert(
+"Mensaje enviado correctamente."
+);
+
+}catch(error){
+
+console.error(error);
+
+alert(
+"Error:\n\n" +
+error.message
+);
+
+}finally{
+
+button.disabled = false;
+button.textContent =
+"Enviar mensaje";
+
+}
+
+}
+);
+
+
+/* =====================================================
+   MENSAJES BUILDER
+===================================================== */
+
+async function loadMessages(){
+
+const {data,error} =
+await supabaseClient
+.from("buildhz_comunicaciones")
+.select("*")
+.order(
+"created_at",
+{
+ascending:false
+}
+);
+
+if(error){
+
+console.error(
+"Error mensajes:",
+error
+);
+
+return;
+
+}
+
+messages =
+data || [];
+
+renderMessages();
+
+}
+
+
+function renderMessages(){
+
+const box =
+document.getElementById(
+"messagesList"
+);
+
+if(!messages.length){
+
+box.innerHTML =
+'<div class="empty">No hay mensajes.</div>';
+
+return;
+
+}
+
+
+box.innerHTML =
+messages.map(message => `
+
+<div class="message">
+
+<div class="message-head">
+
+<b>
+${esc(message.nombre)}
+</b>
+
+<span class="ticket">
+${esc(
+message.ticket ||
+"Sin ticket"
+)}
+</span>
+
+</div>
+
+<div class="small">
+
+${message.created_at
+?
+new Date(
+message.created_at
+).toLocaleString("es-HN")
+:
+""
+}
+
+</div>
+
+<p class="desc">
+${esc(message.mensaje)}
+</p>
+
+${
+message.respuesta
+
+?
+
+`
+
+<div class="reply">
+
+<b>
+Respuesta del Builder
+</b>
+
+<div>
+${esc(message.respuesta)}
+</div>
+
+</div>
+
+`
+
+:
+
+`
+
+<div class="field">
+
+<textarea
+id="reply-${message.id}"
+maxlength="500"
+placeholder="Escribí una respuesta..."
+></textarea>
+
+<div class="actions">
+
+<button
+class="primary"
+onclick="replyMessage(${JSON.stringify(message.id)})"
+>
+Responder
+</button>
+
+</div>
+
+</div>
+
+`
+
+}
+
+</div>
+
+`).join("");
+
+}
+
+
+/* =====================================================
+   RESPONDER
+===================================================== */
+
+async function replyMessage(id){
+
+const area =
+document.getElementById(
+"reply-" + id
+);
+
+const respuesta =
+area?.value.trim();
+
+if(!respuesta){
+
+alert(
+"Escribí una respuesta."
+);
+
+return;
+
+}
+
+
+const {error} =
+await supabaseClient
+.from("buildhz_comunicaciones")
+.update({
+
+respuesta:respuesta,
+
+respondido:true
+
+})
+.eq("id",id);
+
+
+if(error){
+
+console.error(error);
+
+alert(
+"No se pudo enviar la respuesta.\n\n" +
+error.message
+);
+
+return;
+
+}
+
+await loadMessages();
+
+}
+
+
+/* =====================================================
    LOGIN
-   ========================= */
+===================================================== */
 
 document
-  .getElementById("loginBtn")
-  .addEventListener(
-    "click",
-    function(){
+.getElementById("loginBtn")
+.addEventListener(
+"click",
+async () => {
 
-      const code =
-        document
-          .getElementById("builderCode")
-          .value;
-
-
-      if(code === "8789"){
-
-        document
-          .getElementById("loginBox")
-          .classList
-          .add("hidden");
+const code =
+document
+.getElementById("builderCode")
+.value;
 
 
-        document
-          .getElementById("builderPanel")
-          .classList
-          .remove("hidden");
-
-
-        renderBuilderTable();
-
-      }else{
-
-        document
-          .getElementById("loginError")
-          .style
-          .display = "block";
-
-      }
-
-    }
-  );
-
-
-/* =========================
-   ENTER LOGIN
-   ========================= */
+if(code === "8789"){
 
 document
-  .getElementById("builderCode")
-  .addEventListener(
-    "keydown",
-    function(event){
+.getElementById("loginBox")
+.classList
+.add("hidden");
 
-      if(event.key === "Enter"){
+document
+.getElementById("builderPanel")
+.classList
+.remove("hidden");
 
-        document
-          .getElementById("loginBtn")
-          .click();
+document
+.getElementById("loginError")
+.classList
+.add("hidden");
 
-      }
+await loadOrders();
 
-    }
-  );
+await loadMessages();
+
+await loadSettings();
+
+}else{
+
+document
+.getElementById("loginError")
+.classList
+.remove("hidden");
+
+}
+
+}
+);
 
 
-/* =========================
+document
+.getElementById("builderCode")
+.addEventListener(
+"keydown",
+event => {
+
+if(event.key === "Enter"){
+
+document
+.getElementById("loginBtn")
+.click();
+
+}
+
+}
+);
+
+
+/* =====================================================
    LOGOUT
-   ========================= */
+===================================================== */
 
 document
-  .getElementById("logoutBtn")
-  .addEventListener(
-    "click",
-    function(){
+.getElementById("logoutBtn")
+.addEventListener(
+"click",
+() => {
 
-      document
-        .getElementById("builderPanel")
-        .classList
-        .add("hidden");
+document
+.getElementById("builderPanel")
+.classList
+.add("hidden");
 
+document
+.getElementById("loginBox")
+.classList
+.remove("hidden");
 
-      document
-        .getElementById("loginBox")
-        .classList
-        .remove("hidden");
+document
+.getElementById("builderCode")
+.value = "";
 
-
-      document
-        .getElementById("builderCode")
-        .value = "";
-
-
-      document
-        .getElementById("loginError")
-        .style
-        .display = "none";
-
-    }
-  );
+}
+);
 
 
-/* =========================
+/* =====================================================
    PESTAÑAS
-   ========================= */
+===================================================== */
 
 document
-  .querySelectorAll(".tab")
-  .forEach(function(button){
+.querySelectorAll(
+".tab[data-tab]"
+)
+.forEach(button => {
 
-    button.addEventListener(
-      "click",
-      function(){
+button.addEventListener(
+"click",
+() => {
 
-        document
-          .querySelectorAll(".tab")
-          .forEach(function(btn){
+document
+.querySelectorAll(
+".tab[data-tab]"
+)
+.forEach(b =>
+b.classList.remove("active")
+);
 
-            btn.classList.remove("active");
-
-          });
-
-
-        button.classList.add("active");
-
-
-        document
-          .querySelectorAll(".section")
-          .forEach(function(section){
-
-            section.classList.add("hidden");
-
-          });
+button.classList.add("active");
 
 
-        document
-          .getElementById(button.dataset.tab)
-          .classList
-          .remove("hidden");
+document
+.querySelectorAll(".section")
+.forEach(section =>
+section.classList.add("hidden")
+);
 
 
-        if(button.dataset.tab === "jobs"){
-          loadOrders();
-        }
-
-      }
-    );
-
-  });
+document
+.getElementById(
+button.dataset.tab
+)
+.classList
+.remove("hidden");
 
 
-/* =========================
-   ACTUALIZAR CADA 5 SEGUNDOS
-   ========================= */
-
-setInterval(function(){
-
-  loadOrders();
-
-},5000);
-
-
-/* =========================
-   INICIO
-   ========================= */
+if(
+button.dataset.tab === "jobs"
+){
 
 loadOrders();
+
+}
+
+}
+);
+
+});
+
+
+/* =====================================================
+   PESTAÑAS BUILDER
+===================================================== */
+
+document
+.querySelectorAll(
+".tab[data-builder-tab]"
+)
+.forEach(button => {
+
+button.addEventListener(
+"click",
+() => {
+
+document
+.querySelectorAll(
+".tab[data-builder-tab]"
+)
+.forEach(b =>
+b.classList.remove("active")
+);
+
+button.classList.add("active");
+
+
+document
+.getElementById(
+"builderOrders"
+)
+.classList
+.toggle(
+"hidden",
+button.dataset.builderTab !== "orders"
+);
+
+
+document
+.getElementById(
+"builderMessages"
+)
+.classList
+.toggle(
+"hidden",
+button.dataset.builderTab !== "messages"
+);
+
+
+document
+.getElementById(
+"builderSettings"
+)
+.classList
+.toggle(
+"hidden",
+button.dataset.builderTab !== "settings"
+);
+
+
+if(
+button.dataset.builderTab ===
+"messages"
+){
+
+loadMessages();
+
+}
+
+
+if(
+button.dataset.builderTab ===
+"settings"
+){
+
+loadSettings();
+
+}
+
+}
+);
+
+});
+
+
+/* =====================================================
+   TICKETS
+===================================================== */
+
+document
+.getElementById("ticketSwitch")
+.addEventListener(
+"click",
+async () => {
+
+const next =
+!settings.tickets_enabled;
+
+
+const {error} =
+await supabaseClient
+.from("buildhz_settings")
+.update({
+
+tickets_enabled:next
+
+})
+.eq("id",1);
+
+
+if(error){
+
+console.error(error);
+
+alert(
+"No se pudo guardar el ajuste.\n\n" +
+error.message
+);
+
+return;
+
+}
+
+
+settings.tickets_enabled =
+next;
+
+
+document
+.getElementById("ticketSwitch")
+.classList
+.toggle(
+"on",
+next
+);
+
+render();
+
+}
+);
+
+
+/* =====================================================
+   LÍMITE DE CARACTERES
+===================================================== */
+
+document
+.getElementById("saveSettingsBtn")
+.addEventListener(
+"click",
+async () => {
+
+const n =
+Math.max(
+20,
+Math.min(
+5000,
+Number(
+document
+.getElementById(
+"maxCharsInput"
+)
+.value
+) || 200
+)
+);
+
+
+const {error} =
+await supabaseClient
+.from("buildhz_settings")
+.update({
+
+max_characters:n
+
+})
+.eq("id",1);
+
+
+if(error){
+
+console.error(error);
+
+alert(
+"No se pudieron guardar los ajustes.\n\n" +
+error.message
+);
+
+return;
+
+}
+
+
+settings.max_characters =
+n;
+
+setMaxCharacters();
+
+alert(
+"Ajustes guardados correctamente."
+);
+
+}
+);
+
+
+/* =====================================================
+   CONTADOR
+===================================================== */
+
+document
+.getElementById("what")
+.addEventListener(
+"input",
+updateCounter
+);
+
+
+/* =====================================================
+   INICIO
+===================================================== */
+
+async function start(){
+
+try{
+
+await loadSettings();
+
+await loadOrders();
+
+}catch(error){
+
+console.error(
+"Error iniciando BuildHz:",
+error
+);
+
+showConnectionError(
+error.message
+);
+
+}
+
+}
+
+start();
+
+
+/* =====================================================
+   ACTUALIZACIÓN AUTOMÁTICA
+===================================================== */
+
+setInterval(
+loadOrders,
+7000
+);
 
 </script>
 
