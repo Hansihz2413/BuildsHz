@@ -601,7 +601,7 @@ const SUPABASE_URL =
 "https://hkpcggtscuywsnrlzrkb.supabase.co";
 
 const SUPABASE_KEY =
-"PEGÁ_AQUÍ_TU_PUBLISHABLE_KEY";
+"sb_publishable_9LwhivwgtcAGwZW8R5h9Zg_YLXEG62w";
 
 const supabaseClient =
 window.supabase.createClient(
@@ -1272,7 +1272,6 @@ value;
 /* =====================================================
    ENVIAR PEDIDO
 ===================================================== */
-
 document
 .getElementById("requestForm")
 .addEventListener(
@@ -1281,32 +1280,21 @@ async event => {
 
 event.preventDefault();
 
-
 const username =
-document
-.getElementById("username")
-.value
-.trim();
-
+document.getElementById("username").value.trim();
 
 const payment =
-document
-.getElementById("payment")
-.value
-.trim();
-
+document.getElementById("payment").value.trim();
 
 const what =
-document
-.getElementById("what")
-.value
-.trim();
+document.getElementById("what").value.trim();
 
+if(!username || !payment || !what){
+alert("Completá todos los campos obligatorios.");
+return;
+}
 
-if(
-what.length >
-settings.max_characters
-){
+if(what.length > settings.max_characters){
 
 alert(
 "El pedido no puede superar " +
@@ -1315,19 +1303,15 @@ settings.max_characters +
 );
 
 return;
-
 }
 
-
 const button =
-document.getElementById(
-"submitBtn"
-);
+document.getElementById("submitBtn");
 
 button.disabled = true;
-button.textContent =
-"Enviando...";
+button.textContent = "Enviando...";
 
+try{
 
 let ticket = null;
 
@@ -1336,89 +1320,116 @@ if(settings.tickets_enabled){
 ticket =
 "#BZ-" +
 Math.floor(
-1000 +
-Math.random() * 9000
+1000 + Math.random() * 9000
 );
 
 }
 
+/*
+IMPORTANTE:
+Solo enviamos las columnas que existen
+en tu tabla pedidos.
+*/
 
-const {data,error} =
+const pedidoData = {
+
+nombre: username,
+pedido: what,
+pago: payment,
+estado: "pending"
+
+};
+
+if(settings.tickets_enabled){
+pedidoData.ticket = ticket;
+}
+
+const result =
 await supabaseClient
 .from("pedidos")
-.insert({
-
-nombre:username,
-
-pedido:what,
-
-pago:payment,
-
-estado:"pending",
-
-ticket:ticket
-
-})
+.insert(pedidoData)
 .select()
 .single();
 
+console.log("Respuesta Supabase:", result);
 
-button.disabled = false;
-button.textContent =
-"Enviar pedido";
+if(result.error){
 
-
-if(error){
-
-console.error(error);
+console.error(
+"ERROR SUPABASE:",
+result.error
+);
 
 alert(
-"No se pudo enviar el pedido.\n\n" +
-"Revisá la conexión con Supabase."
+"NO SE PUDO ENVIAR EL PEDIDO\n\n" +
+"Mensaje: " +
+(result.error.message || "Error desconocido") +
+"\n\nCódigo: " +
+(result.error.code || "N/A")
 );
 
 return;
-
 }
 
+/* Limpiar formulario */
 
 event.target.reset();
 
 updateCounter();
 
+/* Actualizar pedidos */
+
 await loadOrders();
 
+/* Mostrar ticket */
 
 if(
 settings.tickets_enabled &&
-data
+result.data
 ){
 
 alert(
-"¡Pedido enviado correctamente!\n\n" +
+"¡PEDIDO ENVIADO CORRECTAMENTE!\n\n" +
 "Tu número de ticket es:\n\n" +
-data.ticket +
+result.data.ticket +
 "\n\nGuardalo para comunicarte con el Builder."
 );
 
 }else{
 
 alert(
-"¡Pedido enviado correctamente!"
+"¡PEDIDO ENVIADO CORRECTAMENTE!"
 );
 
 }
 
+/* Ir a trabajos */
 
 document
-.querySelector(
-'[data-tab="jobs"]'
-)
+.querySelector('[data-tab="jobs"]')
 .click();
 
-}
+}catch(error){
+
+console.error(
+"ERROR GENERAL:",
+error
 );
 
+alert(
+"OCURRIÓ UN ERROR\n\n" +
+(error.message || error)
+);
+
+}finally{
+
+button.disabled = false;
+button.textContent = "Enviar pedido";
+
+}
+
+});
+</script>
 
 /* =====================================================
    COMUNICACIÓN
