@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuildHz — Pedidos de Construcción</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --bg:#0b0f14; --panel:#111821; --panel2:#151e29; --line:#263241;
+  --text:#f3f6fa; --muted:#9ca9b8; --accent:#6ea8fe; --accent2:#8b7cff;
+  --pending:#f0ad4e; --building:#4da3ff; --done:#42d392; --danger:#ff6678;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:linear-gradient(135deg,#090d12,#101722 55%,#0b1119);
+  color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  min-height:100vh
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.nav{
+  position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line);
+  background:rgba(11,15,20,.88);backdrop-filter:blur(16px)
+}
+.nav-inner{
+  max-width:1180px;margin:auto;padding:18px 22px;display:flex;
+  align-items:center;justify-content:space-between;gap:20px
+}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.3px}
+.logo{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;color:white;font-weight:900
+}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{
+  border:1px solid transparent;background:transparent;color:var(--muted);
+  padding:10px 13px;border-radius:10px
+}
+.tab:hover,.tab.active{
+  background:#182231;color:#fff;border-color:#2b394b
+}
+.container{max-width:1180px;margin:auto;padding:38px 22px 60px}
+.hero{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  gap:30px;margin-bottom:30px
+}
+.hero h1{font-size:clamp(32px,5vw,56px);line-height:1.02;margin:0 0 12px}
+.hero p{margin:0;color:var(--muted);max-width:680px;font-size:16px}
+.panel{
+  background:linear-gradient(180deg,rgba(21,30,41,.96),rgba(15,22,30,.96));
+  border:1px solid var(--line);border-radius:18px;
+  box-shadow:0 18px 50px rgba(0,0,0,.2)
+}
+.form{padding:25px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}
+.full{grid-column:1/-1}
+.field label{
+  display:block;color:#d9e1ea;font-size:13px;font-weight:700;margin:0 0 8px
+}
+.field input,.field textarea,.field select{
+  width:100%;border:1px solid #2b3949;background:#0c131b;color:#fff;
+  border-radius:11px;padding:12px 13px;outline:none;transition:.2s
+}
+.field textarea{min-height:115px;resize:vertical}
+.field input:focus,.field textarea:focus,.field select:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(110,168,254,.12)
+}
+.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.primary{
+  border:0;border-radius:11px;padding:12px 17px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-weight:800
+}
+.primary:disabled{opacity:.6;cursor:not-allowed}
+.secondary{
+  border:1px solid #334255;background:#151e29;color:#dfe7ef;
+  border-radius:11px;padding:12px 17px
+}
+.notice{
+  padding:14px 16px;margin-bottom:17px;border-radius:12px;
+  background:#101925;border:1px solid #29384a;color:var(--muted);font-size:13px
+}
+.columns{display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
+.col{padding:17px;min-height:220px}
+.col-head{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:13px
+}
+.col-head h3{margin:0;font-size:15px}
+.count{
+  min-width:25px;height:25px;border-radius:99px;background:#202b38;
+  display:grid;place-items:center;color:#cbd5e1;font-size:12px;font-weight:800
+}
+.card{
+  border:1px solid #293646;background:#0d141c;border-radius:14px;
+  padding:15px;margin:10px 0
+}
+.card h4{margin:0 0 7px;font-size:15px}
+.small{font-size:12px;color:var(--muted)}
+.desc{color:#cbd5df;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.badge{
+  display:inline-flex;border-radius:999px;padding:5px 8px;font-size:11px;
+  font-weight:800;margin-bottom:9px
+}
+.badge.pending{background:rgba(240,173,78,.12);color:var(--pending)}
+.badge.building{background:rgba(77,163,255,.12);color:var(--building)}
+.badge.done{background:rgba(66,211,146,.12);color:var(--done)}
+.builder{padding:25px}
+.builder-top{
+  display:flex;justify-content:space-between;gap:15px;
+  align-items:center;margin-bottom:20px
+}
+.builder-top h2{margin:0}
+.table-wrap{overflow:auto}
+.table{width:100%;border-collapse:collapse;min-width:760px}
+.table th,.table td{
+  text-align:left;padding:13px 11px;border-bottom:1px solid #263241;
+  font-size:13px;vertical-align:top
+}
+.table th{
+  color:#91a0b1;font-size:11px;text-transform:uppercase;letter-spacing:.6px
+}
+.status-select{
+  border:1px solid #334255;background:#0c131b;color:#fff;
+  border-radius:8px;padding:7px
+}
+.delete{
+  border:1px solid #54313a;background:#24151a;color:#ff9aaa;
+  border-radius:8px;padding:7px 9px
+}
+.login{max-width:430px;margin:35px auto;padding:25px}
+.login h2{margin-top:0}
+.error{color:#ff8c9b;font-size:13px;margin-top:9px;display:none}
+.empty{text-align:center;color:var(--muted);padding:25px 10px;font-size:13px}
+.hidden{display:none!important}
+.footer{text-align:center;color:#667485;font-size:12px;margin-top:30px}
+
+@media(max-width:800px){
+  .grid,.columns{grid-template-columns:1fr}
+  .full{grid-column:auto}
+  .hero{display:block}
+  .nav-inner{align-items:flex-start;flex-direction:column}
+  .tabs{width:100%}
+  .tab{flex:1}
+  .builder-top{display:block}
+  .builder-top .small{margin-top:6px}
+}
+</style>
+</head>
+
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+
+    <div class="brand">
+      <div class="logo">B</div>
+      <div>
+        BuildHz
+        <span style="color:#77879a;font-weight:600">/ Minecraft</span>
+      </div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="jobs">Ver Trabajos</button>
+      <button class="tab" data-tab="request">Pedir un Trabajo</button>
+      <button class="tab" data-tab="builder">Panel Builder</button>
+    </nav>
+
+  </div>
+</header>
+
+<main class="container">
+
+<!-- TRABAJOS -->
+
+<section id="jobs" class="section">
+
+  <div class="hero">
+    <div>
+      <h1>Trabajos de construcción</h1>
+      <p>
+        Consulta el estado de los pedidos y revisa qué construcciones están
+        pendientes, en construcción o terminadas.
+      </p>
+    </div>
+  </div>
+
+  <div class="columns">
+
+    <div class="panel col">
+      <div class="col-head">
+        <h3>⏳ Pendiente</h3>
+        <span class="count" id="count-pending">0</span>
+      </div>
+      <div id="pending">
+        <div class="empty">Cargando...</div>
+      </div>
+    </div>
+
+    <div class="panel col">
+      <div class="col-head">
+        <h3>🔨 En construcción</h3>
+        <span class="count" id="count-building">0</span>
+      </div>
+      <div id="building">
+        <div class="empty">Cargando...</div>
+      </div>
+    </div>
+
+    <div class="panel col">
+      <div class="col-head">
+        <h3>✓ Terminado</h3>
+        <span class="count" id="count-done">0</span>
+      </div>
+      <div id="done">
+        <div class="empty">Cargando...</div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- PEDIR TRABAJO -->
+
+<section id="request" class="section hidden">
+
+  <div class="hero">
+    <div>
+      <h1>Pedir un trabajo</h1>
+      <p>Completa los datos para enviar tu solicitud al Builder.</p>
+    </div>
+  </div>
+
+  <div class="panel form">
+
+    <div class="notice">
+      Los campos marcados con * son obligatorios.
+    </div>
+
+    <form id="requestForm">
+
+      <div class="grid">
+
+        <div class="field">
+          <label>Tu usuario de Minecraft *</label>
+          <input
+            id="username"
+            maxlength="32"
+            required
+            placeholder="Ej. Steve123"
+          >
+        </div>
+
+        <div class="field">
+          <label>Pago dentro del servidor *</label>
+          <input
+            id="payment"
+            maxlength="60"
+            required
+            placeholder="Ej. 50,000 monedas"
+          >
+        </div>
+
+        <div class="field full">
+          <label>¿Qué quieres que construya? *</label>
+          <textarea
+            id="what"
+            required
+            placeholder="Describe la construcción, tamaño, ubicación, estilo, materiales, etc."
+          ></textarea>
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button type="reset" class="secondary">
+          Limpiar
+        </button>
+
+        <button class="primary" type="submit" id="submitBtn">
+          Enviar pedido
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</section>
+
+
+<!-- PANEL BUILDER -->
+
+<section id="builder" class="section hidden">
+
+  <div id="loginBox" class="panel login">
+
+    <h2>Panel Builder</h2>
+
+    <p class="small">
+      Introduce el código de acceso para administrar los pedidos.
+    </p>
+
+    <div class="field">
+      <label>Código</label>
+
+      <input
+        id="builderCode"
+        type="password"
+        inputmode="numeric"
+        maxlength="12"
+        placeholder="Código de acceso"
+      >
+    </div>
+
+    <div class="actions">
+
+      <button class="primary" id="loginBtn">
+        Entrar al panel
+      </button>
+
+    </div>
+
+    <div class="error" id="loginError">
+      Código incorrecto.
+    </div>
+
+  </div>
+
+
+  <div id="builderPanel" class="panel builder hidden">
+
+    <div class="builder-top">
+
+      <div>
+
+        <h2>Administración de pedidos</h2>
+
+        <div class="small">
+          Administra los pedidos guardados en Supabase.
+        </div>
+
+      </div>
+
+      <button class="secondary" id="logoutBtn">
+        Cerrar sesión
+      </button>
+
+    </div>
+
+    <div class="table-wrap">
+
+      <table class="table">
+
+        <thead>
+
+          <tr>
+            <th>Usuario</th>
+            <th>Trabajo</th>
+            <th>Pago</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+
+        </thead>
+
+        <tbody id="ordersTable">
+
+          <tr>
+            <td colspan="5" class="empty">
+              Cargando pedidos...
+            </td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<div class="footer">
+  BuildHz · Sistema de pedidos para construcciones de Minecraft
+</div>
+
+</main>
+
+
+<script>
+
+/* =========================
+   SUPABASE
+   ========================= */
+
+const SUPABASE_URL =
+  "https://hkpcggtscuywsnrlzrkb.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_9LwhivwgtcAGwZW8R5h9Zg_YLXEG62w";
+
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+
+let orders = [];
+
+
+/* =========================
+   SEGURIDAD HTML
+   ========================= */
+
+function esc(value){
+
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    function(m){
+
+      return {
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+      }[m];
+
+    }
+  );
+
+}
+
+
+/* =========================
+   ESTADOS
+   ========================= */
+
+function normalizeStatus(status){
+
+  const s = String(status ?? "").toLowerCase().trim();
+
+  if(s === "building" || s === "en construcción" || s === "en construccion"){
+    return "building";
+  }
+
+  if(s === "done" || s === "terminado"){
+    return "done";
+  }
+
+  return "pending";
+
+}
+
+
+function statusLabel(status){
+
+  if(status === "building")
+    return "En construcción";
+
+  if(status === "done")
+    return "Terminado";
+
+  return "Pendiente";
+
+}
+
+
+/* =========================
+   CARGAR PEDIDOS
+   ========================= */
+
+async function loadOrders(){
+
+  const { data, error } =
+    await supabaseClient
+      .from("pedidos")
+      .select("*")
+      .order("created_at", {
+        ascending:false
+      });
+
+
+  if(error){
+
+    console.error("ERROR SUPABASE:", error);
+
+    document.getElementById("pending").innerHTML =
+      '<div class="empty">Error al cargar pedidos.</div>';
+
+    document.getElementById("building").innerHTML =
+      '<div class="empty">Error al cargar pedidos.</div>';
+
+    document.getElementById("done").innerHTML =
+      '<div class="empty">Error al cargar pedidos.</div>';
+
+    return;
+
+  }
+
+
+  orders = (data || []).map(function(o){
+
+    return {
+      id:o.id,
+      username:o.nombre,
+      payment:o.pago,
+      what:o.pedido,
+      status:normalizeStatus(o.estado),
+      created_at:o.created_at
+    };
+
+  });
+
+
+  render();
+
+}
+
+
+/* =========================
+   TARJETA PÚBLICA
+   ========================= */
+
+function publicCard(order){
+
+  return `
+    <div class="card">
+
+      <span class="badge ${order.status}">
+        ${statusLabel(order.status)}
+      </span>
+
+      <h4>
+        ${esc(order.what)}
+      </h4>
+
+    </div>
+  `;
+
+}
+
+
+/* =========================
+   MOSTRAR TODO
+   ========================= */
+
+function render(){
+
+  const groups = {
+    pending:[],
+    building:[],
+    done:[]
+  };
+
+
+  orders.forEach(function(order){
+
+    const status =
+      normalizeStatus(order.status);
+
+    groups[status].push(order);
+
+  });
+
+
+  ["pending","building","done"].forEach(function(status){
+
+    const box =
+      document.getElementById(status);
+
+    const counter =
+      document.getElementById(
+        "count-" + status
+      );
+
+
+    counter.textContent =
+      groups[status].length;
+
+
+    if(groups[status].length){
+
+      box.innerHTML =
+        groups[status]
+          .map(publicCard)
+          .join("");
+
+    }else{
+
+      box.innerHTML =
+        '<div class="empty">No hay trabajos aquí.</div>';
+
+    }
+
+  });
+
+
+  renderBuilderTable();
+
+}
+
+
+/* =========================
+   PANEL BUILDER
+   ========================= */
+
+function renderBuilderTable(){
+
+  const table =
+    document.getElementById("ordersTable");
+
+
+  if(!orders.length){
+
+    table.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty">
+          Todavía no hay pedidos.
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    orders.map(function(order){
+
+      return `
+        <tr>
+
+          <td>
+            <b>${esc(order.username)}</b>
+          </td>
+
+          <td>
+            <div class="desc">
+              ${esc(order.what)}
+            </div>
+          </td>
+
+          <td>
+            ${esc(order.payment)}
+          </td>
+
+          <td>
+
+            <select
+              class="status-select"
+              onchange="changeStatus(${order.id}, this.value)"
+            >
+
+              <option value="pending"
+                ${order.status === "pending" ? "selected" : ""}>
+                Pendiente
+              </option>
+
+              <option value="building"
+                ${order.status === "building" ? "selected" : ""}>
+                En construcción
+              </option>
+
+              <option value="done"
+                ${order.status === "done" ? "selected" : ""}>
+                Terminado
+              </option>
+
+            </select>
+
+          </td>
+
+          <td>
+
+            <button
+              class="delete"
+              onclick="removeOrder(${order.id})"
+            >
+              Eliminar
+            </button>
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================
+   CAMBIAR ESTADO
+   ========================= */
+
+async function changeStatus(id,newStatus){
+
+  const { error } =
+    await supabaseClient
+      .from("pedidos")
+      .update({
+        estado:newStatus
+      })
+      .eq("id",id);
+
+
+  if(error){
+
+    console.error(error);
+
+    alert("No se pudo cambiar el estado.");
+
+    return;
+
+  }
+
+
+  await loadOrders();
+
+}
+
+
+/* =========================
+   ELIMINAR
+   ========================= */
+
+async function removeOrder(id){
+
+  const order =
+    orders.find(function(o){
+      return String(o.id) === String(id);
+    });
+
+
+  if(!order)
+    return;
+
+
+  const ok =
+    confirm(
+      "¿Seguro que quieres eliminar este pedido?\n\n" +
+      "Usuario: " + order.username + "\n" +
+      "Trabajo: " + order.what + "\n\n" +
+      "Esta acción no se puede deshacer."
+    );
+
+
+  if(!ok)
+    return;
+
+
+  const { error } =
+    await supabaseClient
+      .from("pedidos")
+      .delete()
+      .eq("id",id);
+
+
+  if(error){
+
+    console.error(error);
+
+    alert("No se pudo eliminar el pedido.");
+
+    return;
+
+  }
+
+
+  await loadOrders();
+
+}
+
+
+/* =========================
+   ENVIAR PEDIDO
+   ========================= */
+
+document
+  .getElementById("requestForm")
+  .addEventListener(
+    "submit",
+    async function(event){
+
+      event.preventDefault();
+
+
+      const username =
+        document
+          .getElementById("username")
+          .value
+          .trim();
+
+
+      const payment =
+        document
+          .getElementById("payment")
+          .value
+          .trim();
+
+
+      const what =
+        document
+          .getElementById("what")
+          .value
+          .trim();
+
+
+      const button =
+        document.getElementById("submitBtn");
+
+
+      button.disabled = true;
+      button.textContent = "Enviando...";
+
+
+      const { error } =
+        await supabaseClient
+          .from("pedidos")
+          .insert({
+
+            nombre:username,
+            pedido:what,
+            pago:payment,
+            estado:"pending"
+
+          });
+
+
+      button.disabled = false;
+      button.textContent = "Enviar pedido";
+
+
+      if(error){
+
+        console.error(
+          "ERROR AL INSERTAR:",
+          error
+        );
+
+        alert(
+          "No se pudo enviar el pedido.\n\n" +
+          "Revisá la conexión con Supabase."
+        );
+
+        return;
+
+      }
+
+
+      document
+        .getElementById("requestForm")
+        .reset();
+
+
+      alert(
+        "¡Pedido enviado correctamente!"
+      );
+
+
+      await loadOrders();
+
+
+      document
+        .querySelector('[data-tab="jobs"]')
+        .click();
+
+    }
+  );
+
+
+/* =========================
+   LOGIN
+   ========================= */
+
+document
+  .getElementById("loginBtn")
+  .addEventListener(
+    "click",
+    function(){
+
+      const code =
+        document
+          .getElementById("builderCode")
+          .value;
+
+
+      if(code === "8789"){
+
+        document
+          .getElementById("loginBox")
+          .classList
+          .add("hidden");
+
+
+        document
+          .getElementById("builderPanel")
+          .classList
+          .remove("hidden");
+
+
+        renderBuilderTable();
+
+      }else{
+
+        document
+          .getElementById("loginError")
+          .style
+          .display = "block";
+
+      }
+
+    }
+  );
+
+
+/* =========================
+   ENTER LOGIN
+   ========================= */
+
+document
+  .getElementById("builderCode")
+  .addEventListener(
+    "keydown",
+    function(event){
+
+      if(event.key === "Enter"){
+
+        document
+          .getElementById("loginBtn")
+          .click();
+
+      }
+
+    }
+  );
+
+
+/* =========================
+   LOGOUT
+   ========================= */
+
+document
+  .getElementById("logoutBtn")
+  .addEventListener(
+    "click",
+    function(){
+
+      document
+        .getElementById("builderPanel")
+        .classList
+        .add("hidden");
+
+
+      document
+        .getElementById("loginBox")
+        .classList
+        .remove("hidden");
+
+
+      document
+        .getElementById("builderCode")
+        .value = "";
+
+
+      document
+        .getElementById("loginError")
+        .style
+        .display = "none";
+
+    }
+  );
+
+
+/* =========================
+   PESTAÑAS
+   ========================= */
+
+document
+  .querySelectorAll(".tab")
+  .forEach(function(button){
+
+    button.addEventListener(
+      "click",
+      function(){
+
+        document
+          .querySelectorAll(".tab")
+          .forEach(function(btn){
+
+            btn.classList.remove("active");
+
+          });
+
+
+        button.classList.add("active");
+
+
+        document
+          .querySelectorAll(".section")
+          .forEach(function(section){
+
+            section.classList.add("hidden");
+
+          });
+
+
+        document
+          .getElementById(button.dataset.tab)
+          .classList
+          .remove("hidden");
+
+
+        if(button.dataset.tab === "jobs"){
+          loadOrders();
+        }
+
+      }
+    );
+
+  });
+
+
+/* =========================
+   ACTUALIZAR CADA 5 SEGUNDOS
+   ========================= */
+
+setInterval(function(){
+
+  loadOrders();
+
+},5000);
+
+
+/* =========================
+   INICIO
+   ========================= */
+
+loadOrders();
+
+</script>
+
+</body>
+</html>
